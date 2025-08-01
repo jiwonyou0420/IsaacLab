@@ -19,18 +19,34 @@
             "host": "localhost"
         },
         {
-            "name": "Python: Train Environment",
+            "name": "Python: Train skrl",
             "type": "python",
             "request": "launch",
-            "args" : ["--task", "Isaac-Reach-Franka-v0", "--headless"],
+            "args" : ["--task", "Isaac-Reach-Franka-v0", "--headless", "--video"],
+            "program": "${workspaceFolder}/scripts/reinforcement_learning/skrl/train.py",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Python: Play skrl",
+            "type": "python",
+            "request": "launch",
+            "args" : ["--task", "Isaac-Reach-Franka-v0", "--num_envs", "32", "--video"],
+            "program": "${workspaceFolder}/scripts/reinforcement_learning/skrl/play.py",
+            "console": "integratedTerminal"
+        },
+                {
+            "name": "Python: Train rsl rl",
+            "type": "python",
+            "request": "launch",
+            "args" : ["--task", "Isaac-Lift-Cube-Franka-v0", "--headless", "--video"],
             "program": "${workspaceFolder}/scripts/reinforcement_learning/rsl_rl/train.py",
             "console": "integratedTerminal"
         },
         {
-            "name": "Python: Play Environment",
+            "name": "Python: Play rsl rl",
             "type": "python",
             "request": "launch",
-            "args" : ["--task", "Isaac-Reach-Franka-v0", "--num_envs", "32"],
+            "args" : ["--task", "Isaac-Lift-Cube-Franka-v0", "--num_envs", "32", "--video"],
             "program": "${workspaceFolder}/scripts/reinforcement_learning/rsl_rl/play.py",
             "console": "integratedTerminal"
         },
