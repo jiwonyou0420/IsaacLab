@@ -28,7 +28,6 @@ from isaaclab.assets import AssetBaseCfg, RigidObjectCfg
 from isaaclab.scene import InteractiveScene, InteractiveSceneCfg
 from isaaclab.sensors import FrameTransformerCfg
 from isaaclab.utils import configclass
-
 ##
 # Pre-defined configs
 ##
@@ -76,8 +75,10 @@ class FrameTransformerSensorSceneCfg(InteractiveSceneCfg):
     cube_transform = FrameTransformerCfg(
         prim_path="{ENV_REGEX_NS}/Robot/base",
         target_frames=[FrameTransformerCfg.FrameCfg(prim_path="{ENV_REGEX_NS}/Cube")],
-        debug_vis=False,
+        debug_vis=True, # set True to visualize frames
     )
+    # to change marker size...
+    cube_transform.visualizer_cfg.markers["frame"].scale = (0.05, 0.05, 0.05)
 
     robot_transforms = FrameTransformerCfg(
         prim_path="{ENV_REGEX_NS}/Robot/base",
