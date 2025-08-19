@@ -6,19 +6,19 @@
 from isaaclab.utils import configclass
 import isaaclab.sim as sim_utils
 from isaaclab.sensors import CameraCfg
-from isaaclab_tasks.manager_based.manipulation.lift.config.franka.joint_pos_env_cfg import FrankaCubeLiftEnvCfg
+from isaaclab_tasks.manager_based.manipulation.lift.config.ur_5.joint_pos_env_cfg import UR10CubeLiftEnvCfg
 from isaaclab.managers import TerminationTermCfg as DoneTerm
 from isaaclab_tasks.manager_based.manipulation.lift.mdp import object_at_goal_stable
 
 @configclass
-class FrankaCubeLiftCamEnvCfg(FrankaCubeLiftEnvCfg):
+class UR10CubeLiftCamEnvCfg(UR10CubeLiftEnvCfg):
     """Franka Lift-Cube env + two extra cameras (wrist + bird's-eye)."""
 
     def __post_init__(self):
         super().__post_init__()
-        # --- Wrist camera mounted on the end-effector (panda_hand) ---
+        # --- Wrist camera mounted on the end-effector (wrist_3_link) ---
         self.scene.wrist_cam = CameraCfg(
-            prim_path="{ENV_REGEX_NS}/Robot/panda_hand/wrist_cam",
+            prim_path="{ENV_REGEX_NS}/Robot/wrist_3_link/wrist_cam",
             width=1280,
             height=720,
             update_period=0.0,  # every sim step
@@ -32,7 +32,7 @@ class FrankaCubeLiftCamEnvCfg(FrankaCubeLiftEnvCfg):
             # Start with a mild forward offset; tune in the GUI.
             # Set convention to "ros" so XYZ axes match the usual REP-103.
             offset=CameraCfg.OffsetCfg(
-                pos=(0.1, 0, -0.1), rot=(-0.10452, -0.69934, -0.69934, -0.10452), convention="opengl" 
+                pos=(-0.1, 0, 0), rot=(-0.0923, -0.70106, -0.70106, -0.0923), convention="opengl"
             ),
             debug_vis=True,  # shows frustum so you can tune interactively
         )
@@ -67,7 +67,7 @@ class FrankaCubeLiftCamEnvCfg(FrankaCubeLiftEnvCfg):
                 pos_threshold=0.1,
                 lin_vel_threshold=0.08,
                 ang_vel_threshold=0.5,
-                hold_time_s=0.1,    # tune: e.g., 0.3–1.0 s
+                hold_time_s=0.5,    # tune: e.g., 0.3–1.0 s
             ),
             time_out=True
         )

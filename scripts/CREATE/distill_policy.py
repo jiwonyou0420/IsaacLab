@@ -12,7 +12,7 @@ from PIL import Image
 import numpy as np
 import torchvision.transforms as T
 import torchvision.models as tvm
-from franka_cam_inference import SKRL_MODEL_CHECKPOINT
+SKRL_MODEL_CHECKPOINT = "/home/andres/Documents/jiwon/IsaacLab/logs/skrl/franka_lift/2025-08-11_09-54-01_ppo_torch/checkpoints/best_agent.pt"
 DATA_ROOT = "/home/andres/Documents/jiwon/IsaacLab/logs/CREATE/franka_cam_record/2025-08-12_17-35-15"
 
 parser = argparse.ArgumentParser("Distill vision policy from recorded FrankaCam dataset")

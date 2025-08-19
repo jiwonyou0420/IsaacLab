@@ -60,7 +60,7 @@ agent:
   rewards_shaper_scale: 0.01
   time_limit_bootstrap: False
   experiment:
-    directory: "ur10_lift"   # <— changed from franka_lift
+    directory: "ur5_adapt_lift"   # <— changed from franka_lift
     experiment_name: ""
     write_interval: auto
     checkpoint_interval: auto

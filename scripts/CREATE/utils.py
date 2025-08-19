@@ -1,0 +1,1 @@
+SKRL_MODEL_CHECKPOINT = "/home/andres/Documents/jiwon/IsaacLab/logs/skrl/franka_lift/2025-08-11_09-54-01_ppo_torch/checkpoints/best_agent.pt" 

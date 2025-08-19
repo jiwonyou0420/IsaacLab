@@ -12,9 +12,9 @@ from pathlib import Path
 from isaaclab.app import AppLauncher
 
 # ---------------- CLI ----------------
-SKRL_MODEL_CHECKPOINT="/home/andres/Documents/jiwon/IsaacLab/logs/skrl/franka_lift/2025-08-11_09-54-01_ppo_torch/checkpoints/best_agent.pt"
-parser = argparse.ArgumentParser(description="Play a skrl checkpoint on a custom FrankaCam env (no registry).")
-parser.add_argument("--checkpoint", type=str, default=SKRL_MODEL_CHECKPOINT , help="Path to skrl agent checkpoint (.pt)")
+SKRL_MODEL_CHECKPOINT = "/home/andres/Documents/jiwon/IsaacLab/logs/skrl/ur10_lift/2025-08-15_15-59-45_ppo_torch/checkpoints/best_agent.pt"
+parser = argparse.ArgumentParser(description="Play a skrl checkpoint on a custom URLiftCam env (no registry).")
+parser.add_argument("--checkpoint", type=str, default=SKRL_MODEL_CHECKPOINT, help="Path to skrl agent checkpoint (.pt)")
 parser.add_argument("--num_envs", type=int, default=1, help="Number of environments")
 parser.add_argument(
     "--ml_framework", type=str, default="torch", choices=["torch", "jax", "jax-numpy"], help="skrl backend"
@@ -40,7 +40,7 @@ from isaaclab_rl.skrl import SkrlVecEnvWrapper
 from isaaclab.utils.io import load_yaml
 
 # >>>>>> CHANGE THIS to your module / class name <<<<<<
-from franka_cam_env_cfg import FrankaCubeLiftCamEnvCfg# <-- your custom env cfg
+from ur_cam_env_cfg import UR10CubeLiftCamEnvCfg# <-- your custom env cfg
 
 if version.parse(skrl.__version__) < version.parse("1.4.2"):
     skrl.logger.error("Unsupported skrl version. Please install skrl>=1.4.2")
@@ -69,7 +69,7 @@ def _load_agent_cfg_from_checkpoint(checkpoint_path: str) -> dict:
 
 def main():
     # 1) Build env cfg directly (no registry), then create env
-    env_cfg = FrankaCubeLiftCamEnvCfg()
+    env_cfg = UR10CubeLiftCamEnvCfg()
     env_cfg.scene.num_envs = args.num_envs
     env_cfg.sim.device = args.device
     if args.device == "cpu":

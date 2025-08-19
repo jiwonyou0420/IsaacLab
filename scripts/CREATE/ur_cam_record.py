@@ -7,10 +7,9 @@ from datetime import datetime
 from pathlib import Path
 
 from isaaclab.app import AppLauncher
-
-SKRL_MODEL_CHECKPOINT="/home/andres/Documents/jiwon/IsaacLab/logs/skrl/franka_lift/2025-08-11_09-54-01_ppo_torch/checkpoints/best_agent.pt"
-parser = argparse.ArgumentParser(description="Play skrl checkpoint on FrankaCam env and record ALL envs.")
-parser.add_argument("--checkpoint", type=str, default=SKRL_MODEL_CHECKPOINT , help="Path to skrl agent checkpoint (.pt)")
+from ur_cam_inference import SKRL_MODEL_CHECKPOINT
+parser = argparse.ArgumentParser(description="Play skrl checkpoint on URCam env and record ALL envs.")
+parser.add_argument("--checkpoint", type=str, default=SKRL_MODEL_CHECKPOINT, help="Path to skrl agent checkpoint (.pt)")
 parser.add_argument("--num_envs", type=int, default=1, help="Number of environments")
 parser.add_argument("--steps", type=int, default=2000, help="Max simulation steps then quit")
 parser.add_argument("--ml_framework", type=str, default="torch", choices=["torch", "jax", "jax-numpy"])
@@ -33,7 +32,7 @@ from isaaclab.envs import ManagerBasedRLEnv
 from isaaclab_rl.skrl import SkrlVecEnvWrapper
 from isaaclab.utils.io import load_yaml
 
-from franka_cam_env_cfg import FrankaCubeLiftCamEnvCfg
+from ur_cam_env_cfg import UR10CubeLiftCamEnvCfg
 
 if version.parse(skrl.__version__) < version.parse("1.4.2"):
     skrl.logger.error("Install skrl>=1.4.2")
@@ -50,7 +49,7 @@ def isaaclab_root():
 
 def make_output_dir(num_envs: int):
     out = os.path.join(
-        isaaclab_root(), "logs", "CREATE", "franka_cam_record",
+        isaaclab_root(), "logs", "CREATE", "ur_cam_record",
         datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     )
     os.makedirs(out, exist_ok=True)
@@ -81,8 +80,10 @@ def _load_agent_cfg_from_checkpoint(checkpoint_path: str) -> dict:
     return load_yaml(str(yaml_path))
 
 def main():
+    import csv
+
     # ---- env ----
-    env_cfg = FrankaCubeLiftCamEnvCfg()
+    env_cfg = UR10CubeLiftCamEnvCfg()
     env_cfg.scene.num_envs = args.num_envs
     env_cfg.sim.device = args.device
     if args.device == "cpu":
@@ -112,11 +113,11 @@ def main():
     csv_path = os.path.join(out_dir, "dataset.csv")
 
     # CSV headers
-    # 0~6 for arm, 7 for gripper
-    joint_pos_cols = [f"joint{i}_pos" for i in range(0, 8)] 
-    joint_vel_cols = [f"joint{i}_vel" for i in range(0, 8)] 
+    # joint 0~5 for arm, 6 for gripper "finger_joint"
+    joint_pos_cols = [f"joint{i}_pos" for i in range(0, 7)]
+    joint_vel_cols = [f"joint{i}_vel" for i in range(0, 7)]
     cmd_cols = ["goal_x", "goal_y", "goal_z"]
-    action_cols = [f"action_joint{i}" for i in range(0, 8)] 
+    action_cols = [f"action_joint{i}" for i in range(0, 7)] 
 
     headers = ["simulation_time", "index", "env"] + joint_pos_cols + joint_vel_cols + cmd_cols + action_cols
 
@@ -131,8 +132,8 @@ def main():
             break
 
         # --- get current joint pos/vel ---
-        joint_pos = env.unwrapped.scene["robot"].data.joint_pos.detach().cpu().numpy()  # (N, 8)
-        joint_vel = env.unwrapped.scene["robot"].data.joint_vel.detach().cpu().numpy()  # (N, 8)
+        joint_pos = env.unwrapped.scene["robot"].data.joint_pos.detach().cpu().numpy()  # (N, 7)
+        joint_vel = env.unwrapped.scene["robot"].data.joint_vel.detach().cpu().numpy()  # (N, 7)
 
         with torch.inference_mode():
             out = runner.agent.act(obs, timestep=0, timesteps=0)
@@ -148,11 +149,11 @@ def main():
 
         # prepare actions
         acts = action.detach().cpu().numpy()  # (N, act_dim)
-        if acts.shape[1] >= 8:
-            acts8 = acts[:, :8]
+        if acts.shape[1] >= 7:
+            acts7 = acts[:, :7]
         else:
-            pad = np.zeros((N, 8 - acts.shape[1]), dtype=acts.dtype)
-            acts8 = np.concatenate([acts, pad], axis=1)
+            pad = np.zeros((N, 7 - acts.shape[1]), dtype=acts.dtype)
+            acts7 = np.concatenate([acts, pad], axis=1)
 
         # write one CSV row per env
         sim_time = step * float(dt)
@@ -162,7 +163,7 @@ def main():
                 + joint_pos[e].tolist()
                 + joint_vel[e].tolist()
                 + goal_xyz[e].tolist()
-                + acts8[e].tolist()
+                + acts7[e].tolist()
             )
             writer.writerow(row)
 
