@@ -1,5 +1,5 @@
 # runs inference of skrl policy in Franka Cam env
-# records camera images, robot control input, etc to logs
+# records camera images, robot control input, etc to logs — DYNAMIC SIZES
 
 import argparse
 import os
@@ -21,7 +21,6 @@ args.headless = True
 simulation_app = AppLauncher(args).app
 
 # --- imports after Kit start ---
-import gymnasium as gym
 import torch
 import numpy as np
 from PIL import Image
@@ -80,6 +79,18 @@ def _load_agent_cfg_from_checkpoint(checkpoint_path: str) -> dict:
         raise FileNotFoundError(f"Missing agent.yaml next to checkpoint: {yaml_path}")
     return load_yaml(str(yaml_path))
 
+def _extract_actions_from_act_output(out):
+    # skrl compatibility helper
+    # out might be a tuple/list; prefer "mean_actions" if present
+    if isinstance(out, (tuple, list)):
+        last = out[-1]
+        if isinstance(last, dict) and "mean_actions" in last:
+            return last["mean_actions"]
+        return out[0]
+    if isinstance(out, dict) and "mean_actions" in out:
+        return out["mean_actions"]
+    return out
+
 def main():
     # ---- env ----
     env_cfg = FrankaCubeLiftCamEnvCfg()
@@ -107,17 +118,27 @@ def main():
         dt = env.unwrapped.step_dt
     N = args.num_envs
 
+    # ---- discover sizes (joint count, action dim) BEFORE writing headers ----
+    # joint count from robot tensors
+    robot = env.unwrapped.scene["robot"]
+    joint_pos_sample = robot.data.joint_pos  # (N, num_joints)
+    num_joints = int(joint_pos_sample.shape[1])
+
+    # action dim from a dry act()
+    with torch.inference_mode():
+        act_out = runner.agent.act(obs, timestep=0, timesteps=0)
+        action_sample = _extract_actions_from_act_output(act_out)  # (N, act_dim)
+    action_dim = int(action_sample.shape[1])
+
     # ---- outputs ----
     out_dir = make_output_dir(N)
     csv_path = os.path.join(out_dir, "dataset.csv")
 
-    # CSV headers
-    # 0~6 for arm, 7 for gripper
-    joint_pos_cols = [f"joint{i}_pos" for i in range(0, 8)] 
-    joint_vel_cols = [f"joint{i}_vel" for i in range(0, 8)] 
+    # CSV headers (dynamic)
+    joint_pos_cols = [f"joint{i}_pos" for i in range(num_joints)]
+    joint_vel_cols = [f"joint{i}_vel" for i in range(num_joints)]
     cmd_cols = ["goal_x", "goal_y", "goal_z"]
-    action_cols = [f"action_joint{i}" for i in range(0, 8)] 
-
+    action_cols = [f"action{i}" for i in range(action_dim)]
     headers = ["simulation_time", "index", "env"] + joint_pos_cols + joint_vel_cols + cmd_cols + action_cols
 
     # open CSV once
@@ -130,13 +151,13 @@ def main():
         if not simulation_app.is_running():
             break
 
-        # --- get current joint pos/vel ---
-        joint_pos = env.unwrapped.scene["robot"].data.joint_pos.detach().cpu().numpy()  # (N, 8)
-        joint_vel = env.unwrapped.scene["robot"].data.joint_vel.detach().cpu().numpy()  # (N, 8)
+        # --- current joint pos/vel ---
+        joint_pos = robot.data.joint_pos.detach().cpu().numpy()  # (N, num_joints)
+        joint_vel = robot.data.joint_vel.detach().cpu().numpy()  # (N, num_joints)
 
         with torch.inference_mode():
-            out = runner.agent.act(obs, timestep=0, timesteps=0)
-            action = out[-1].get("mean_actions", out[0])  # (N, act_dim)
+            act_out = runner.agent.act(obs, timestep=0, timesteps=0)
+            action = _extract_actions_from_act_output(act_out)     # (N, action_dim)
             obs, _, _, _, _ = env.step(action)
 
         # commands (goal xyz)
@@ -146,13 +167,8 @@ def main():
         except Exception:
             goal_xyz = np.zeros((N, 3), dtype=np.float32)
 
-        # prepare actions
-        acts = action.detach().cpu().numpy()  # (N, act_dim)
-        if acts.shape[1] >= 8:
-            acts8 = acts[:, :8]
-        else:
-            pad = np.zeros((N, 8 - acts.shape[1]), dtype=acts.dtype)
-            acts8 = np.concatenate([acts, pad], axis=1)
+        # to numpy
+        acts_np = action.detach().cpu().numpy()
 
         # write one CSV row per env
         sim_time = step * float(dt)
@@ -162,7 +178,7 @@ def main():
                 + joint_pos[e].tolist()
                 + joint_vel[e].tolist()
                 + goal_xyz[e].tolist()
-                + acts8[e].tolist()
+                + acts_np[e].tolist()
             )
             writer.writerow(row)
 
